@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>LIN_ADVANCE K-Factor Test Pattern Generator</title>
+<script>
+function gengcode (form) {
+	document.forms['form1']['textarea'].value = '';
+	document.forms['form1']['textarea'].value += 	'; K-Factor Test\n' +
+													';\n' +
+													'M190 S' + document.forms['form1']['BED_TEMP'].value + ' ; set and wait for bed temp\n' +
+													'M104 S' + document.forms['form1']['NOZZLE_TEMP'].value + ' ; set nozzle temp and continue\n' +
+													'G28 ; home all axis\n';
+	
+	if(document.getElementById('USE_UBL').checked) {
+    document.forms['form1']['textarea'].value += 	'G29 ; execute bed automatic leveling compensation\n';
+    }
+	
+	document.forms['form1']['textarea'].value += 	'M109 S' + document.forms['form1']['NOZZLE_TEMP'].value + ' ; block waiting for nozzle temp\n' +
+													'G21 ; set units to millimeters\n' +
+													'M204 S500 ; lower acceleration to 500mm/s2 during the test\n' +
+													'M83 ; use relative distances for extrusion\n' + 
+													'G90 ; use absolute coordinates\n' +
+													';\n' +
+													'; go to layer height and prime nozzle on a line to the left\n' +
+													';\n' +
+													'G1 X20 Y' + (parseFloat(document.forms['form1']['BEDSIZE_Y'].value) - 162.5) + ' F' + document.forms['form1']['MOVE_SPEED'].value + '\n' +
+													'G1 Z' + document.forms['form1']['LAYER_HEIGHT'].value + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
+													'G1 X20 Y' + (parseFloat(document.forms['form1']['BEDSIZE_Y'].value) - 62.5) + ' E10' + ' F' + document.forms['form1']['SLOW_SPEED'].value + ' ; extrude some to start clean\n' +
+													'G1 E-' + document.forms['form1']['RETRACTION'].value + '\n' +
+													';\n' +
+													'; start the test (all values are relative coordinates)\n' +
+													';\n' +
+													'G1 X' + ((parseFloat(document.forms['form1']['BEDSIZE_X'].value) - 80) / 2) + ' Y' + ((parseFloat(document.forms['form1']['BEDSIZE_Y'].value) - 125) / 2) + ' F' + document.forms['form1']['MOVE_SPEED'].value + ' ; move to pattern start\n' +
+													'G91 ; use relative coordinates\n';
+	for (i = 0; i <= 100; i = i + 5) {
+    	document.forms['form1']['textarea'].value += 'M900 K' + i + ' ; set K-factor\n' +
+													 'G1 E' + document.forms['form1']['RETRACTION'].value + '\n' +
+													 'G1 X20 Y0 E' + (parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 20) + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
+													 'G1 X40 Y0 E' + (parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 40) + ' F' + document.forms['form1']['FAST_SPEED'].value + '\n' +
+													 'G1 X20 Y0 E' + (parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 20) + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
+													 'G1 E-' + document.forms['form1']['RETRACTION'].value + '\n' +
+													 'G1 X-80 Y5 F' + document.forms['form1']['MOVE_SPEED'].value + '\n';
+	}
+	
+	document.forms['form1']['textarea'].value += 	';\n' +
+													'; mark the test area for reference\n' +
+													';\n' +
+													'G1 X20 Y0 F' + document.forms['form1']['MOVE_SPEED'].value + '\n' +
+													'G1 E' + document.forms['form1']['RETRACTION'].value + '\n' +
+													'G1 X0 Y20 E' + (parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 20) + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
+													'G1 E-' + document.forms['form1']['RETRACTION'].value + '\n' +
+													'G1 X40 Y-20 F' + document.forms['form1']['MOVE_SPEED'].value + '\n' +
+													'G1 E' + document.forms['form1']['RETRACTION'].value + '\n' +
+													'G1 X0 Y20 E' + (parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 20) + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
+													'G1 E-' + document.forms['form1']['RETRACTION'].value + '\n' +
+													';\n' +
+													'; finish\n' +
+													';\n' +
+													'G4 ; wait\n' +
+													'M104 S0 ; turn off hotend\n' +
+													'M140 S0 ; turn off bed\n' +
+													'G90 ; use absolute coordinates\n' +
+													'G1 Z30 Y200 F' + document.forms['form1']['MOVE_SPEED'].value + ' ; move away from the print\n' +
+													'M84 ; disable motors\n' +
+													'M502 ; resets parameters from ROM (for those who do not have an EEPROM)\n' +
+													'M501 ; resets parameters from EEPROM (preferably)\n' +
+													';\n';
+}
+</script>
+<noscript>You have to activate java script for this to work</noscript>
+</head>
+<body>
+<form id="form1" name="form1" method="get">
+  <table width="90%" border="1">
+    <tbody>
+      <tr>
+        <td width="56%">Settings: </td>
+        <td width="44%"><label for="textarea">GCode:<br></label></td>
+      </tr>
+      <tr>
+        <td><table width="98%" border="1">
+          <tbody>
+            <tr>
+              <td width="18%" valign="middle"><label for="NOZZLE_TEMP">Nozzle Temperature:</label></td>
+              <td width="16%" valign="middle"><input type="number" name="NOZZLE_TEMP" id="NOZZLE_TEMP" value="205"></td>
+              <td width="66%" valign="middle">Nozzle Temperature in °C</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="BED_TEMP">Bed Temperature:</label></td>
+              <td valign="middle"><input type="number" name="BED_TEMP" id="BED_TEMP" value="60"></td>
+              <td valign="middle">Bed Temperature in °C</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="SLOW_SPEED">Slow printing speed:</label></td>
+              <td valign="middle"><input type="number" name="SLOW_SPEED" id="SLOW_SPEED" value="1200"></td>
+              <td valign="middle">Slow printing speed in mm/min</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="FAST_SPEED">Fast printing speed:</label></td>
+              <td valign="middle"><input type="number" name="FAST_SPEED" id="FAST_SPEED" value="4200"></td>
+              <td valign="middle">Slow printing speed in mm/min</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="MOVE_SPEED">Movement Speed:</label></td>
+              <td valign="middle"><input type="number" name="MOVE_SPEED" id="MOVE_SPEED" value="7200"></td>
+              <td valign="middle">Movement speed in mm/min</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="USE_UBL">Use Bed Levelling:</label></td>
+              <td valign="middle"><input type="checkbox" name="USE_UBL" id="USE_UBL"></td>
+              <td valign="middle">Activate UBL and level bed before printing</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="RETRACTION">Retraction:</label></td>
+              <td valign="middle"><input type="number" name="RETRACTION" id="RETRACTION" value="1.000"></td>
+              <td valign="middle">Retraction distance in mm</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="BEDSIZE_X">Bed size X:</label></td>
+              <td valign="middle"><input type="number" name="BEDSIZE_X" id="BEDSIZE_X" value="200"></td>
+              <td valign="middle">Size in mm of the bed in X</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="BEDSIZE_Y">Bed Size Y:</label></td>
+              <td valign="middle"><input type="number" name="BEDSIZE_Y" id="BEDSIZE_Y" value="200"></td>
+              <td valign="middle">Size in mm of the bed in Y</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="LAYER_HEIGHT">Layer Height:</label></td>
+              <td valign="middle"><input type="number" name="LAYER_HEIGHT" id="LAYER_HEIGHT" value="0.200"></td>
+              <td valign="middle">Layer Height in mm</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="EXTRUSION_FACTOR">Extrusion Factor:</label></td>
+              <td valign="middle"><input type="number" name="EXTRUSION_FACTOR" id="EXTRUSION_FACTOR" value="0.037418"></td>
+              <td valign="middle">0.037418 works fine for 0.4 nozzle and 1.75 filament. 3 mm filament or different nozzle size will need new values</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="EXTRUSION_MULT">Extrusion Multiplier:</label></td>
+              <td valign="middle"><input type="number" name="EXTRUSION_MULT" id="EXTRUSION_MULT" value="1.0"></td>
+              <td valign="middle">Usually 1.0</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          <input name="button" type="button" id="button" form="form1" value="Generate GCode" onClick="gengcode(this.form)">
+        </p></td>
+        <td>
+        <textarea name="textarea" cols="140" rows="50" id="textarea"></textarea></td>
+      </tr>
+    </tbody>
+  </table>
+</form>
+</body>
+</html>
