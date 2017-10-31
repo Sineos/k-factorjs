@@ -10,11 +10,28 @@ function gengcode (form) {
 													';\n' +
 													'M190 S' + document.forms['form1']['BED_TEMP'].value + ' ; set and wait for bed temp\n' +
 													'M104 S' + document.forms['form1']['NOZZLE_TEMP'].value + ' ; set nozzle temp and continue\n' +
-													'G28 ; home all axis\n';
+													'G28 ; home all axes\n';
 	
 	if(document.getElementById('USE_UBL').checked) {
     document.forms['form1']['textarea'].value += 	'G29 ; execute bed automatic leveling compensation\n';
     }
+	
+	var START_K = parseInt(document.forms['form1']['K_START'].value);
+	var END_K = parseInt(document.forms['form1']['K_END'].value);
+	var STEP_K = parseInt(document.forms['form1']['K_STEP'].value);
+	var RANGE_K =  END_K - START_K;
+	if (RANGE_K % STEP_K != 0) {
+		alert("Your K-Factor range cannot be cleanly divided. Check Start / End / Steps for the K-Factor");
+		document.forms['form1']['textarea'].value = '';
+		return;
+	}
+	var PRINT_SIZE_Y = RANGE_K / STEP_K * 5 + 25;
+	if (PRINT_SIZE_Y > parseFloat(document.forms['form1']['BEDSIZE_Y'].value) - 20) {
+		alert("Your K-Factor settings exceed your Y bed size. Check Start / End / Steps for the K-Factor");
+		document.forms['form1']['textarea'].value = '';
+		return;
+	}
+	var START_Y = (parseFloat(document.forms['form1']['BEDSIZE_Y'].value) - PRINT_SIZE_Y) / 2;
 	
 	document.forms['form1']['textarea'].value += 	'M109 S' + document.forms['form1']['NOZZLE_TEMP'].value + ' ; block waiting for nozzle temp\n' +
 													'G21 ; set units to millimeters\n' +
@@ -24,20 +41,23 @@ function gengcode (form) {
 													';\n' +
 													'; go to layer height and prime nozzle on a line to the left\n' +
 													';\n' +
-													'G1 X20 Y' + (parseFloat(document.forms['form1']['BEDSIZE_Y'].value) - 162.5) + ' F' + document.forms['form1']['MOVE_SPEED'].value + '\n' +
+													'G1 X20 Y' + START_Y + ' F' + document.forms['form1']['MOVE_SPEED'].value + '\n' +
 													'G1 Z' + document.forms['form1']['LAYER_HEIGHT'].value + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
-													'G1 X20 Y' + (parseFloat(document.forms['form1']['BEDSIZE_Y'].value) - 62.5) + ' E10' + ' F' + document.forms['form1']['SLOW_SPEED'].value + ' ; extrude some to start clean\n' +
+													'G1 X20 Y' + (START_Y + 100) + ' E10' + ' F' + document.forms['form1']['SLOW_SPEED'].value + ' ; extrude some to start clean\n' +
 													'G1 E-' + document.forms['form1']['RETRACTION'].value + '\n' +
 													';\n' +
 													'; start the test (all values are relative coordinates)\n' +
 													';\n' +
-													'G1 X' + ((parseFloat(document.forms['form1']['BEDSIZE_X'].value) - 80) / 2) + ' Y' + ((parseFloat(document.forms['form1']['BEDSIZE_Y'].value) - 125) / 2) + ' F' + document.forms['form1']['MOVE_SPEED'].value + ' ; move to pattern start\n' +
+													'G1 X' + ((parseFloat(document.forms['form1']['BEDSIZE_X'].value) - 80) / 2) + ' Y' + START_Y + ' F' + document.forms['form1']['MOVE_SPEED'].value + ' ; move to pattern start\n' +
 													'G91 ; use relative coordinates\n';
 	
-	var EXT_20 = parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 20;
-	var EXT_40 = parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 40;
-	var START_K = parseInt(document.forms['form1']['K_START'].value);
-	for (i = START_K; i <= START_K + 100; i = i + 5) {
+	var NOZZLE_LINE_RATIO = "1.2";
+	var EXTRUSION_RATIO = parseFloat(document.forms['form1']['NOZ_DIA'].value) * NOZZLE_LINE_RATIO * parseFloat(document.forms['form1']['LAYER_HEIGHT'].value) / (Math.pow((parseFloat(document.forms['form1']['FIL_DIA'].value) / 2),2) * Math.PI);
+	var EXT_20 = roundNumber(EXTRUSION_RATIO * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 20, 5);
+	var EXT_40 = roundNumber(EXTRUSION_RATIO * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 40, 5);
+	
+	
+	for (i = START_K; i <= END_K; i = i + STEP_K) {
     	document.forms['form1']['textarea'].value += 'M900 K' + i + ' ; set K-factor\n' +
 													 'G1 E' + document.forms['form1']['RETRACTION'].value + '\n' +
 													 'G1 X20 Y0 E' + EXT_20 + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
@@ -97,20 +117,45 @@ function destroyClickedElement(event) {
   	// remove the link from the DOM
   	document.body.removeChild(event.target);
 }
+
+// https://stackoverflow.com/questions/11832914/round-to-at-most-2-decimal-places-only-if-necessary
+function roundNumber(num, scale) {
+  if(!("" + num).includes("e")) {
+    return +(Math.round(num + "e+" + scale)  + "e-" + scale);
+  } else {
+    var arr = ("" + num).split("e");
+    var sig = ""
+    if(+arr[1] + scale > 0) {
+      sig = "+";
+    }
+    return +(Math.round(+arr[0] + "e" + sig + (+arr[1] + scale)) + "e-" + scale);
+  }
+}
+	
 </script>
-<noscript>You have to activate java script for this to work</noscript>
+<noscript>You have to activate javascript for this to work</noscript>
 </head>
 <body>
 <form id="form1" name="form1" method="get">
   <table width="90%" border="1">
     <tbody>
       <tr>
-        <td width="62%">Settings: </td>
-        <td width="38%"><label for="textarea">GCode:<br></label></td>
+        <td width="62%"><strong>Settings: </strong></td>
+        <td width="38%"><label for="textarea"><strong>GCode:</strong><br></label></td>
       </tr>
       <tr>
         <td><table width="100%" border="1">
           <tbody>
+            <tr>
+              <td valign="middle"><label for="FIL_DIA">Filament Diameter:</label></td>
+              <td valign="middle"><input type="number" name="FIL_DIA" id="FIL_DIA" value="1.75"></td>
+              <td valign="middle">Diameter of the used filament in mm</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="NOZ_DIA">Nozzle Diameter:</label></td>
+              <td valign="middle"><input type="number" name="NOZ_DIA" id="NOZ_DIA" value="0.4"></td>
+              <td valign="middle">Diameter of the nozzle in mm</td>
+            </tr>
             <tr>
               <td width="20%" valign="middle"><label for="NOZZLE_TEMP">Nozzle Temperature:</label></td>
               <td width="14%" valign="middle"><input type="number" name="NOZZLE_TEMP" id="NOZZLE_TEMP" value="205"></td>
@@ -162,11 +207,6 @@ function destroyClickedElement(event) {
               <td valign="middle">Layer Height in mm</td>
             </tr>
             <tr>
-              <td valign="middle"><label for="EXTRUSION_FACTOR">Extrusion Factor:</label></td>
-              <td valign="middle"><input type="number" name="EXTRUSION_FACTOR" id="EXTRUSION_FACTOR" value="0.037418"></td>
-              <td valign="middle">0.037418 works fine for 0.4 nozzle and 1.75 filament. 3 mm filament or different nozzle size will need new values</td>
-            </tr>
-            <tr>
               <td valign="middle"><label for="EXTRUSION_MULT">Extrusion Multiplier:</label></td>
               <td valign="middle"><input type="number" name="EXTRUSION_MULT" id="EXTRUSION_MULT" value="1.0"></td>
               <td valign="middle">Usually 1.0</td>
@@ -175,6 +215,19 @@ function destroyClickedElement(event) {
               <td valign="middle"><label for="K_START">Starting value for K:</label></td>
               <td valign="middle"><input type="number" name="K_START" id="K_START" value="0"></td>
               <td valign="middle">Starting value for the K-Factor. Usually 0 but for bowden setups you might want to start higher, e.g. 30</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="K_END">Ending value for K:</label></td>
+              <td valign="middle"><input type="number" name="K_END" id="K_END" value="100"></td>
+              <td valign="middle">Ending value of the K-Factor.</td>
+            </tr>
+            <tr>
+              <td valign="middle"><label for="K_STEP">K-Factor Stepping:</label></td>
+              <td valign="middle"><select name="K_STEP" id="K_STEP">
+                <option value="5" selected>5</option>
+                <option value="10">10</option>
+              </select></td>
+              <td valign="middle">Stepping of the K-Factor in the test pattern</td>
             </tr>
           </tbody>
         </table>
