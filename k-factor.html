@@ -6,7 +6,7 @@
 <script>
 function gengcode (form) {
 	document.forms['form1']['textarea'].value = '';
-	document.forms['form1']['textarea'].value += 	'; K-Factor Test\n' +
+	document.forms['form1']['textarea'].value = 	'; K-Factor Test\n' +
 													';\n' +
 													'M190 S' + document.forms['form1']['BED_TEMP'].value + ' ; set and wait for bed temp\n' +
 													'M104 S' + document.forms['form1']['NOZZLE_TEMP'].value + ' ; set nozzle temp and continue\n' +
@@ -33,12 +33,16 @@ function gengcode (form) {
 													';\n' +
 													'G1 X' + ((parseFloat(document.forms['form1']['BEDSIZE_X'].value) - 80) / 2) + ' Y' + ((parseFloat(document.forms['form1']['BEDSIZE_Y'].value) - 125) / 2) + ' F' + document.forms['form1']['MOVE_SPEED'].value + ' ; move to pattern start\n' +
 													'G91 ; use relative coordinates\n';
-	for (i = 0; i <= 100; i = i + 5) {
+	
+	var EXT_20 = parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 20;
+	var EXT_40 = parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 40;
+	var START_K = parseInt(document.forms['form1']['K_START'].value);
+	for (i = START_K; i <= START_K + 100; i = i + 5) {
     	document.forms['form1']['textarea'].value += 'M900 K' + i + ' ; set K-factor\n' +
 													 'G1 E' + document.forms['form1']['RETRACTION'].value + '\n' +
-													 'G1 X20 Y0 E' + (parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 20) + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
-													 'G1 X40 Y0 E' + (parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 40) + ' F' + document.forms['form1']['FAST_SPEED'].value + '\n' +
-													 'G1 X20 Y0 E' + (parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 20) + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
+													 'G1 X20 Y0 E' + EXT_20 + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
+													 'G1 X40 Y0 E' + EXT_40 + ' F' + document.forms['form1']['FAST_SPEED'].value + '\n' +
+													 'G1 X20 Y0 E' + EXT_20 + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
 													 'G1 E-' + document.forms['form1']['RETRACTION'].value + '\n' +
 													 'G1 X-80 Y5 F' + document.forms['form1']['MOVE_SPEED'].value + '\n';
 	}
@@ -48,11 +52,11 @@ function gengcode (form) {
 													';\n' +
 													'G1 X20 Y0 F' + document.forms['form1']['MOVE_SPEED'].value + '\n' +
 													'G1 E' + document.forms['form1']['RETRACTION'].value + '\n' +
-													'G1 X0 Y20 E' + (parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 20) + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
+													'G1 X0 Y20 E' + EXT_20 + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
 													'G1 E-' + document.forms['form1']['RETRACTION'].value + '\n' +
 													'G1 X40 Y-20 F' + document.forms['form1']['MOVE_SPEED'].value + '\n' +
 													'G1 E' + document.forms['form1']['RETRACTION'].value + '\n' +
-													'G1 X0 Y20 E' + (parseFloat(document.forms['form1']['EXTRUSION_FACTOR'].value) * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 20) + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
+													'G1 X0 Y20 E' + EXT_20 + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
 													'G1 E-' + document.forms['form1']['RETRACTION'].value + '\n' +
 													';\n' +
 													'; finish\n' +
@@ -67,6 +71,32 @@ function gengcode (form) {
 													'M501 ; resets parameters from EEPROM (preferably)\n' +
 													';\n';
 }
+// https://stackoverflow.com/questions/21479107/saving-html5-textarea-contents-to-file
+function saveTextAsFile(form) {
+  	var textToWrite = document.getElementById('textarea').value;
+	var textFileAsBlob = new Blob([ textToWrite ], { type: 'text/plain' });
+  	var fileNameToSaveAs = "kfactor.gcode";
+
+	var downloadLink = document.createElement("a");
+	downloadLink.download = fileNameToSaveAs;
+	downloadLink.innerHTML = "Download File";
+	if (window.webkitURL != null) {
+		// Chrome allows the link to be clicked without actually adding it to the DOM.
+		downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
+	} else {
+		// Firefox requires the link to be added to the DOM before it can be clicked.
+		downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
+		downloadLink.onclick = destroyClickedElement;
+		downloadLink.style.display = "none";
+		document.body.appendChild(downloadLink);
+	}
+
+	downloadLink.click();
+}
+function destroyClickedElement(event) {
+  	// remove the link from the DOM
+  	document.body.removeChild(event.target);
+}
 </script>
 <noscript>You have to activate java script for this to work</noscript>
 </head>
@@ -75,15 +105,15 @@ function gengcode (form) {
   <table width="90%" border="1">
     <tbody>
       <tr>
-        <td width="56%">Settings: </td>
-        <td width="44%"><label for="textarea">GCode:<br></label></td>
+        <td width="62%">Settings: </td>
+        <td width="38%"><label for="textarea">GCode:<br></label></td>
       </tr>
       <tr>
-        <td><table width="98%" border="1">
+        <td><table width="100%" border="1">
           <tbody>
             <tr>
-              <td width="18%" valign="middle"><label for="NOZZLE_TEMP">Nozzle Temperature:</label></td>
-              <td width="16%" valign="middle"><input type="number" name="NOZZLE_TEMP" id="NOZZLE_TEMP" value="205"></td>
+              <td width="20%" valign="middle"><label for="NOZZLE_TEMP">Nozzle Temperature:</label></td>
+              <td width="14%" valign="middle"><input type="number" name="NOZZLE_TEMP" id="NOZZLE_TEMP" value="205"></td>
               <td width="66%" valign="middle">Nozzle Temperature in °C</td>
             </tr>
             <tr>
@@ -141,13 +171,23 @@ function gengcode (form) {
               <td valign="middle"><input type="number" name="EXTRUSION_MULT" id="EXTRUSION_MULT" value="1.0"></td>
               <td valign="middle">Usually 1.0</td>
             </tr>
+            <tr>
+              <td valign="middle"><label for="K_START">Starting value for K:</label></td>
+              <td valign="middle"><input type="number" name="K_START" id="K_START" value="0"></td>
+              <td valign="middle">Starting value for the K-Factor. Usually 0 but for bowden setups you might want to start higher, e.g. 30</td>
+            </tr>
           </tbody>
         </table>
         <p>
           <input name="button" type="button" id="button" form="form1" value="Generate GCode" onClick="gengcode(this.form)">
         </p></td>
         <td>
-        <textarea name="textarea" cols="140" rows="50" id="textarea"></textarea></td>
+          <p>
+            <textarea name="textarea" cols="120" rows="40" id="textarea"></textarea>
+          </p>
+        <p>
+          <input type="button" name="button2" id="button2" value="Download as file" onClick="saveTextAsFile(this.form)">
+        </p></td>
       </tr>
     </tbody>
   </table>
