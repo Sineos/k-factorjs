@@ -7,7 +7,12 @@
 # put a list of the values used on the begining of the gcode as comments on simplify3d style
 
 set -u
-FILAMENT_DIAMETER="1.75" # in mm
+
+# Parameter list, edit to your need
+# Values must be integer (bash restriction) except 
+#     FILAMENT_DIAMETER, NOZZLE_DIAMETER, EXTRUSION_MULT, NOZZLE_LINE_RATIO
+
+FILAMENT_DIAMETER="1.75" # in mm 
 NOZZLE_DIAMETER="0.4" # in mm
 NOZZLE_TEMP="205" # C degrees
 BED_TEMP="60" # C degrees
@@ -18,12 +23,35 @@ USE_UBL="0" # Set to 1 to enable bed levelling
 RETRACTION="1.000" # mm
 BEDSIZE_X="200" # mm
 BEDSIZE_Y="200" # mm
-LAYER_HEIGHT="0.200" # mm 
+LAYER_HEIGHT="0.200" # mm
 K_START="0" # Starting value of the K-Factor for the Pattern
 K_END="100" # Ending value of the K-Factor for the Pattern
-K_STEPPING="5" # Stepping of the K-FACTOR for the pattern. Needs to be a multiple of K_END minus K_START
+K_STEPPING="5" # Stepping of the K-FACTOR for the pattern. Needs to be a common denominator of K_END minus K_START
 EXTRUSION_MULT="1.0" # arbitraty multiplier, just for testing, should be 1.0 normally
 NOZZLE_LINE_RATIO="1.2" # Ratio between nozzle size and line width. Should be between 1.05 and 1.2
+
+# End of parameter list
+
+cat <<EOF
+FILAMENT_DIAMETER = $FILAMENT_DIAMETER mm
+NOZZLE_DIAMETER   = $NOZZLE_DIAMETER mm
+NOZZLE_TEMP       = $NOZZLE_TEMP °C degrees centigrade
+BED_TEMP          = $BED_TEMP °C degrees
+SLOW_SPEED        = $SLOW_SPEED mm/min
+FAST_SPEED        = $FAST_SPEED mm/min
+MOVE_SPEED        = $MOVE_SPEED mm/min
+USE_UBL           = $USE_UBL Set to 1 enables bed levelling
+RETRACTION        = $RETRACTION mm
+BEDSIZE_X         = $BEDSIZE_X mm
+BEDSIZE_Y         = $BEDSIZE_Y mm
+LAYER_HEIGHT      = $LAYER_HEIGHT mm 
+K_START           = $K_START Lowest value of the K-Factor for the Pattern
+K_END             = $K_END Highest value of the K-Factor for the Pattern
+K_STEPPING        = $K_STEPPING Stepping of the K-FACTOR for the pattern. Needs to be a common denominator of K_END minus K_START
+EXTRUSION_MULT    = $EXTRUSION_MULT arbitraty multiplier, just for testing, should be 1.0 normally
+NOZZLE_LINE_RATIO = $NOZZLE_LINE_RATIO Ratio between nozzle size and line width. Should be between 1.05 and 1.2
+
+EOF
 
 K_RANGE=$(($K_END-$K_START))
 if (( $K_RANGE % $K_STEPPING != 0 ))
@@ -38,6 +66,13 @@ then
 	echo "Your K-Factor settings exceed your Y bed size. Check Start / End / Steps for the K-Factor"
 	exit
 fi
+
+echo "If those parameters do fit your need then type return"
+echo "  else kill the procedure and edit to your need"
+echo
+echo "Caution, the generated Gcode program issues a G28 AFTER heating bed and hot-end"
+read GO_ON
+
 
 START_X=$(awk -v var="$BEDSIZE_X" 'BEGIN {print (var - 80)/2}')
 START_Y=$(awk -v bedy="$BEDSIZE_Y" -v printsizey="$PRINT_SIZE_Y" 'BEGIN {printf "%.2f", (bedy - printsizey) / 2 }')
