@@ -17,7 +17,7 @@ BED_TEMP="60" # C degrees
 SLOW_SPEED="1200" # mm/min
 FAST_SPEED="4200" # mm/min
 MOVE_SPEED="7200" # mm/min
-USE_UBL="0" # Set to 1 to enable bed levelling
+USE_UBL="0" # Set to 1 to activate UBL bed levelling
 RETRACTION="1.000" # mm
 BEDSIZE_X="200" # mm
 BEDSIZE_Y="200" # mm
@@ -38,7 +38,7 @@ BED_TEMP          = $BED_TEMP °C degrees
 SLOW_SPEED        = $SLOW_SPEED mm/min
 FAST_SPEED        = $FAST_SPEED mm/min
 MOVE_SPEED        = $MOVE_SPEED mm/min
-USE_UBL           = $USE_UBL Set to 1 enables bed levelling
+USE_UBL           = $USE_UBL Set to 1 to activate UBL bed levelling
 RETRACTION        = $RETRACTION mm
 BEDSIZE_X         = $BEDSIZE_X mm
 BEDSIZE_Y         = $BEDSIZE_Y mm
@@ -92,7 +92,7 @@ G28 ; home all axes
 EOF
 
 if [ "$USE_UBL" = "1" ] ; then
-  echo "G29 ; execute bed automatic leveling compensation"
+  echo "G29 A    ; Activate the Unified Bed Leveling system"
 fi
 
 cat <<EOF
