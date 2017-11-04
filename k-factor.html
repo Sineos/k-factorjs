@@ -5,35 +5,84 @@
 <title>LIN_ADVANCE K-Factor Test Pattern Generator</title>
 <script>
 function gengcode (form) {
+	
+	var FILAMENT_DIAMETER = parseFloat(document.forms['form1']['FIL_DIA'].value);
+	var NOZZLE_DIAMETER = parseFloat(document.forms['form1']['NOZ_DIA'].value);
+	var NOZZLE_TEMP = parseInt(document.forms['form1']['NOZZLE_TEMP'].value);
+	var NOZZLE_LINE_RATIO = parseFloat(document.forms['form1']['NOZ_LIN_R'].value);	 
+	var BED_TEMP = parseInt(document.forms['form1']['BED_TEMP'].value);
+	var SPEED_SLOW = parseInt(document.forms['form1']['SLOW_SPEED'].value);
+	var SPEED_FAST = parseInt(document.forms['form1']['FAST_SPEED'].value);
+	var SPEED_MOVE = parseInt(document.forms['form1']['MOVE_SPEED'].value);	
+	var RETRACT_DIST = parseFloat(document.forms['form1']['RETRACTION'].value);
+	var BED_X = parseInt(document.forms['form1']['BEDSIZE_X'].value);
+	var BED_Y = parseInt(document.forms['form1']['BEDSIZE_Y'].value);
+	var HEIGHT_LAYER = parseFloat(document.forms['form1']['LAYER_HEIGHT'].value);	
+	var EXT_MULT = parseFloat(document.forms['form1']['EXTRUSION_MULT'].value);
+	var START_K = parseInt(document.forms['form1']['K_START'].value);
+	var END_K = parseInt(document.forms['form1']['K_END'].value);
+	var STEP_K = parseInt(document.forms['form1']['K_STEP'].value);
+
+	// Check if K-Factor Stepping is a multiple of the K-Factor Range
+	var RANGE_K =  END_K - START_K;
+	if (RANGE_K % STEP_K != 0) {
+		alert("Your K-Factor range cannot be cleanly divided. Check Start / End / Steps for the K-Factor");
+		document.forms['form1']['textarea'].value = '';
+		return;
+	}	
+	// Check if the Test Pattern size does not exceed the Y Bed Size
+	var PRINT_SIZE_Y = RANGE_K / STEP_K * 5 + 25;
+	if (PRINT_SIZE_Y > BED_Y - 20) {
+		alert("Your K-Factor settings exceed your Y bed size. Check Start / End / Steps for the K-Factor");
+		document.forms['form1']['textarea'].value = '';
+		return;
+	}
+	var START_Y = (BED_Y - PRINT_SIZE_Y) / 2;	
+
+	// Convert speeds from mm/s to mm/min if needed
+	if(document.getElementById('MM_S').checked) {
+    	SPEED_SLOW = SPEED_SLOW * 60;
+		SPEED_FAST = SPEED_FAST * 60;
+		SPEED_MOVE = SPEED_MOVE * 60;
+    }
+
+	//Set the extrusion parameters
+	var EXTRUSION_RATIO = NOZZLE_DIAMETER * NOZZLE_LINE_RATIO * HEIGHT_LAYER / (Math.pow(FILAMENT_DIAMETER / 2,2) * Math.PI);
+	var EXT_20 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 20, 5);
+	var EXT_40 = roundNumber(EXTRUSION_RATIO * EXT_MULT * 40, 5);
+	
 	document.forms['form1']['textarea'].value = '';
 	document.forms['form1']['textarea'].value = 	'; K-Factor Test\n' +
 													';\n' +
-													'M190 S' + document.forms['form1']['BED_TEMP'].value + ' ; set and wait for bed temp\n' +
-													'M104 S' + document.forms['form1']['NOZZLE_TEMP'].value + ' ; set nozzle temp and continue\n' +
+													'; Created: ' + new Date() + '\n' +
+													'; Settings:\n' +
+													'; Filament Diameter = ' + FILAMENT_DIAMETER + '\n' +
+													'; Nozzle Diameter = ' + NOZZLE_DIAMETER + '\n' +
+													'; Nozzle Temperature = ' + NOZZLE_TEMP + '\n' +
+													'; Nozzle / Line Ratio = ' + NOZZLE_LINE_RATIO + '\n' +
+													'; Bed Temperature = ' +BED_TEMP + '\n' +
+													'; Slow Printing Speed = ' + SPEED_SLOW + '\n' +
+													'; Fast Printing Speed = ' + SPEED_FAST + '\n' +
+													'; Movement Speed = ' + SPEED_MOVE + '\n' +
+													'; Use UBL = ' + (document.getElementById('USE_UBL').checked ? "true" : "false") + '\n' +
+													'; Retraction Distance = ' + RETRACT_DIST + '\n' +
+													'; Bed Size X = ' + BED_X + '\n' +
+													'; Bed Size Y = ' + BED_Y + '\n' +
+													'; Layer Height = ' + HEIGHT_LAYER + '\n' +
+													'; Extrusion Multiplier = ' + EXT_MULT + '\n' +
+													'; Starting Value K-Factor = ' + START_K + '\n' +
+													'; Ending value K-Factor = ' + END_K + '\n' +
+													'; K-Factor Stepping = ' + STEP_K + '\n' +
+													';\n' +
+													'M190 S' + BED_TEMP + ' ; set and wait for bed temp\n' +
+													'M104 S' + NOZZLE_TEMP + ' ; set nozzle temp and continue\n' +
 													'G28 ; home all axes\n';
 	
 	if(document.getElementById('USE_UBL').checked) {
     document.forms['form1']['textarea'].value += 	'G29 ; execute bed automatic leveling compensation\n';
     }
 	
-	var START_K = parseInt(document.forms['form1']['K_START'].value);
-	var END_K = parseInt(document.forms['form1']['K_END'].value);
-	var STEP_K = parseInt(document.forms['form1']['K_STEP'].value);
-	var RANGE_K =  END_K - START_K;
-	if (RANGE_K % STEP_K != 0) {
-		alert("Your K-Factor range cannot be cleanly divided. Check Start / End / Steps for the K-Factor");
-		document.forms['form1']['textarea'].value = '';
-		return;
-	}
-	var PRINT_SIZE_Y = RANGE_K / STEP_K * 5 + 25;
-	if (PRINT_SIZE_Y > parseFloat(document.forms['form1']['BEDSIZE_Y'].value) - 20) {
-		alert("Your K-Factor settings exceed your Y bed size. Check Start / End / Steps for the K-Factor");
-		document.forms['form1']['textarea'].value = '';
-		return;
-	}
-	var START_Y = (parseFloat(document.forms['form1']['BEDSIZE_Y'].value) - PRINT_SIZE_Y) / 2;
-	
-	document.forms['form1']['textarea'].value += 	'M109 S' + document.forms['form1']['NOZZLE_TEMP'].value + ' ; block waiting for nozzle temp\n' +
+	document.forms['form1']['textarea'].value += 	'M109 S' + NOZZLE_TEMP + ' ; block waiting for nozzle temp\n' +
 													'G21 ; set units to millimeters\n' +
 													'M204 S500 ; lower acceleration to 500mm/s2 during the test\n' +
 													'M83 ; use relative distances for extrusion\n' + 
@@ -41,43 +90,38 @@ function gengcode (form) {
 													';\n' +
 													'; go to layer height and prime nozzle on a line to the left\n' +
 													';\n' +
-													'G1 X20 Y' + START_Y + ' F' + document.forms['form1']['MOVE_SPEED'].value + '\n' +
-													'G1 Z' + document.forms['form1']['LAYER_HEIGHT'].value + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
-													'G1 X20 Y' + (START_Y + 100) + ' E10' + ' F' + document.forms['form1']['SLOW_SPEED'].value + ' ; extrude some to start clean\n' +
-													'G1 E-' + document.forms['form1']['RETRACTION'].value + '\n' +
+													'G1 X20 Y' + START_Y + ' F' + SPEED_MOVE + '\n' +
+													'G1 Z' + HEIGHT_LAYER + ' F' + SPEED_SLOW + '\n' +
+													'G1 X20 Y' + (START_Y + 100) + ' E10' + ' F' + SPEED_SLOW + ' ; extrude some to start clean\n' +
+													'G1 E-' + RETRACT_DIST + '\n' +
 													';\n' +
 													'; start the test (all values are relative coordinates)\n' +
 													';\n' +
-													'G1 X' + ((parseFloat(document.forms['form1']['BEDSIZE_X'].value) - 80) / 2) + ' Y' + START_Y + ' F' + document.forms['form1']['MOVE_SPEED'].value + ' ; move to pattern start\n' +
+													'G1 X' + ((BED_X - 80) / 2) + ' Y' + START_Y + ' F' + SPEED_MOVE + ' ; move to pattern start\n' +
 													'G91 ; use relative coordinates\n';
-	
-	var NOZZLE_LINE_RATIO = "1.2";
-	var EXTRUSION_RATIO = parseFloat(document.forms['form1']['NOZ_DIA'].value) * NOZZLE_LINE_RATIO * parseFloat(document.forms['form1']['LAYER_HEIGHT'].value) / (Math.pow((parseFloat(document.forms['form1']['FIL_DIA'].value) / 2),2) * Math.PI);
-	var EXT_20 = roundNumber(EXTRUSION_RATIO * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 20, 5);
-	var EXT_40 = roundNumber(EXTRUSION_RATIO * parseFloat(document.forms['form1']['EXTRUSION_MULT'].value) * 40, 5);
 	
 	
 	for (i = START_K; i <= END_K; i = i + STEP_K) {
     	document.forms['form1']['textarea'].value += 'M900 K' + i + ' ; set K-factor\n' +
-													 'G1 E' + document.forms['form1']['RETRACTION'].value + '\n' +
-													 'G1 X20 Y0 E' + EXT_20 + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
-													 'G1 X40 Y0 E' + EXT_40 + ' F' + document.forms['form1']['FAST_SPEED'].value + '\n' +
-													 'G1 X20 Y0 E' + EXT_20 + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
-													 'G1 E-' + document.forms['form1']['RETRACTION'].value + '\n' +
-													 'G1 X-80 Y5 F' + document.forms['form1']['MOVE_SPEED'].value + '\n';
+													 'G1 E' + RETRACT_DIST + '\n' +
+													 'G1 X20 Y0 E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
+													 'G1 X40 Y0 E' + EXT_40 + ' F' + SPEED_FAST + '\n' +
+													 'G1 X20 Y0 E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
+													 'G1 E-' + RETRACT_DIST + '\n' +
+													 'G1 X-80 Y5 F' + SPEED_MOVE + '\n';
 	}
 	
 	document.forms['form1']['textarea'].value += 	';\n' +
 													'; mark the test area for reference\n' +
 													';\n' +
-													'G1 X20 Y0 F' + document.forms['form1']['MOVE_SPEED'].value + '\n' +
-													'G1 E' + document.forms['form1']['RETRACTION'].value + '\n' +
-													'G1 X0 Y20 E' + EXT_20 + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
-													'G1 E-' + document.forms['form1']['RETRACTION'].value + '\n' +
-													'G1 X40 Y-20 F' + document.forms['form1']['MOVE_SPEED'].value + '\n' +
-													'G1 E' + document.forms['form1']['RETRACTION'].value + '\n' +
-													'G1 X0 Y20 E' + EXT_20 + ' F' + document.forms['form1']['SLOW_SPEED'].value + '\n' +
-													'G1 E-' + document.forms['form1']['RETRACTION'].value + '\n' +
+													'G1 X20 Y0 F' + SPEED_MOVE + '\n' +
+													'G1 E' + RETRACT_DIST + '\n' +
+													'G1 X0 Y20 E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
+													'G1 E-' + RETRACT_DIST + '\n' +
+													'G1 X40 Y-20 F' + SPEED_MOVE + '\n' +
+													'G1 E' + RETRACT_DIST + '\n' +
+													'G1 X0 Y20 E' + EXT_20 + ' F' + SPEED_SLOW + '\n' +
+													'G1 E-' + RETRACT_DIST + '\n' +
 													';\n' +
 													'; finish\n' +
 													';\n' +
@@ -85,7 +129,7 @@ function gengcode (form) {
 													'M104 S0 ; turn off hotend\n' +
 													'M140 S0 ; turn off bed\n' +
 													'G90 ; use absolute coordinates\n' +
-													'G1 Z30 Y200 F' + document.forms['form1']['MOVE_SPEED'].value + ' ; move away from the print\n' +
+													'G1 Z30 Y200 F' + SPEED_MOVE + ' ; move away from the print\n' +
 													'M84 ; disable motors\n' +
 													'M502 ; resets parameters from ROM (for those who do not have an EEPROM)\n' +
 													'M501 ; resets parameters from EEPROM (preferably)\n' +
@@ -162,24 +206,34 @@ function roundNumber(num, scale) {
               <td width="66%" valign="middle">Nozzle Temperature in °C</td>
             </tr>
             <tr>
+              <td valign="middle"><label for="NOZ_LIN_R">Nozze Line Ratio:</label></td>
+              <td valign="middle"><input name="NOZ_LIN_R" type="number" id="NOZ_LIN_R" value="1.2"></td>
+              <td valign="middle">Ratio between nozzle diameter and extruded line width. Should be between 1.05 and 1.2</td>
+            </tr>
+            <tr>
               <td valign="middle"><label for="BED_TEMP">Bed Temperature:</label></td>
               <td valign="middle"><input type="number" name="BED_TEMP" id="BED_TEMP" value="60"></td>
               <td valign="middle">Bed Temperature in °C</td>
             </tr>
             <tr>
+              <td valign="middle"><label for="MM_S">Use mm/s for speeds: </label></td>
+              <td valign="middle"><input type="checkbox" name="MM_S" id="MM_S" checked></td>
+              <td valign="middle">Use mm/s instead of mm/min</td>
+            </tr>
+            <tr>
               <td valign="middle"><label for="SLOW_SPEED">Slow printing speed:</label></td>
-              <td valign="middle"><input type="number" name="SLOW_SPEED" id="SLOW_SPEED" value="1200"></td>
-              <td valign="middle">Slow printing speed in mm/min</td>
+              <td valign="middle"><input type="number" name="SLOW_SPEED" id="SLOW_SPEED" value="20"></td>
+              <td valign="middle">Slow printing speed</td>
             </tr>
             <tr>
               <td valign="middle"><label for="FAST_SPEED">Fast printing speed:</label></td>
-              <td valign="middle"><input type="number" name="FAST_SPEED" id="FAST_SPEED" value="4200"></td>
-              <td valign="middle">Slow printing speed in mm/min</td>
+              <td valign="middle"><input type="number" name="FAST_SPEED" id="FAST_SPEED" value="70"></td>
+              <td valign="middle">Fast printing speed</td>
             </tr>
             <tr>
               <td valign="middle"><label for="MOVE_SPEED">Movement Speed:</label></td>
-              <td valign="middle"><input type="number" name="MOVE_SPEED" id="MOVE_SPEED" value="7200"></td>
-              <td valign="middle">Movement speed in mm/min</td>
+              <td valign="middle"><input type="number" name="MOVE_SPEED" id="MOVE_SPEED" value="120"></td>
+              <td valign="middle">Movement speed</td>
             </tr>
             <tr>
               <td valign="middle"><label for="USE_UBL">Use Bed Levelling:</label></td>
@@ -187,7 +241,7 @@ function roundNumber(num, scale) {
               <td valign="middle">Activate UBL and level bed before printing</td>
             </tr>
             <tr>
-              <td valign="middle"><label for="RETRACTION">Retraction:</label></td>
+              <td valign="middle"><label for="RETRACTION">Retraction Distance:</label></td>
               <td valign="middle"><input type="number" name="RETRACTION" id="RETRACTION" value="1.000"></td>
               <td valign="middle">Retraction distance in mm</td>
             </tr>
@@ -219,7 +273,7 @@ function roundNumber(num, scale) {
             <tr>
               <td valign="middle"><label for="K_END">Ending value for K:</label></td>
               <td valign="middle"><input type="number" name="K_END" id="K_END" value="100"></td>
-              <td valign="middle">Ending value of the K-Factor.</td>
+              <td valign="middle">Ending value of the K-Factor. Bowden setups may be higher than 100</td>
             </tr>
             <tr>
               <td valign="middle"><label for="K_STEP">K-Factor Stepping:</label></td>
