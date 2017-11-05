@@ -23,7 +23,7 @@ BEDSIZE_Y="200" # mm
 LAYER_HEIGHT="0.200" # mm 
 K_START="0" # Starting value of the K-Factor for the Pattern
 K_END="100" # Ending value of the K-Factor for the Pattern
-K_STEPPING="5" # Stepping of the K-FACTOR for the pattern. Needs to be a multiple of K_END minus K_START
+K_STEPPING="5" # Stepping of the K-FACTOR for the pattern. Needs to be an exact divisor of K_END minus K_START
 EXTRUSION_MULT="1.0" # arbitraty multiplier, just for testing, should be 1.0 normally
 NOZZLE_LINE_RATIO="1.2" # Ratio between nozzle size and line width. Should be between 1.05 and 1.2
 
@@ -109,10 +109,11 @@ G91 ; use relative coordinates
 EOF
 
 ## Loop over all chosen K-Factors
-i=${K_START}
-while $(awk -v cnt="$i" -v kend="$K_END" 'BEGIN { if (cnt >= kend) {exit 1}}'); do
+cnt=$(awk -v krange="$K_RANGE" -v kstep="$K_STEPPING" 'BEGIN {print krange/kstep}')
+i=0
+while [ ${i} -le ${cnt} ]; do
 	cat << EOF
-M900 K${i} ; set K-factor
+M900 K$(awk -v kstart="$K_START" -v kstep="$K_STEPPING" -v num="$i" 'BEGIN {print kstep * num + kstart}') ; set K-factor
 G1 E${RETRACTION}
 G1 X20 Y0 E${EXT_20} F${SLOW_SPEED}
 G1 X40 Y0 E${EXT_40} F${FAST_SPEED}
@@ -120,7 +121,7 @@ G1 X20 Y0 E${EXT_20} F${SLOW_SPEED}
 G1 E-${RETRACTION}
 G1 X-80 Y5 F${MOVE_SPEED}
 EOF
-	i=$(awk -v cnt="$i" -v kstep="$K_STEPPING" 'BEGIN {printf "%.2f", cnt + kstep}')
+	i=$((i+1))
 	done
 
 cat << EOF
