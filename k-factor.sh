@@ -1,10 +1,8 @@
 #!/bin/bash
 
 # Test generator for K-Factor calibration
-# Version 0.9 by Andre Ruiz (aka Token47), andre (dot) ruiz (at) gmail (dot) com
+# By Andre Ruiz (aka Token47), andre (dot) ruiz (at) gmail (dot) com
 
-# To Do:
-# put a list of the values used on the begining of the gcode as comments on simplify3d style
 
 set -u
 FILAMENT_DIAMETER="1.75" # in mm
@@ -25,37 +23,56 @@ K_STEPPING="5" # Stepping of the K-FACTOR for the pattern. Needs to be a multipl
 EXTRUSION_MULT="1.0" # arbitraty multiplier, just for testing, should be 1.0 normally
 NOZZLE_LINE_RATIO="1.2" # Ratio between nozzle size and line width. Should be between 1.05 and 1.2
 
-K_RANGE=$(($K_END-$K_START))
-if (( $K_RANGE % $K_STEPPING != 0 ))
-then
+K_RANGE=$((K_END-K_START))
+K_MODULO=$(awk -v krange="$K_RANGE" -v kstep="$K_STEPPING" 'BEGIN {print krange%kstep}')
+if [ ${K_MODULO} -ne 0 ]; then
 	echo "Your K-Factor range cannot be cleanly divided. Check Start / End / Steps for the K-Factor"
 	exit
 fi
 
-PRINT_SIZE_Y=$(($K_RANGE/$K_STEPPING*5+25));
-if (( $PRINT_SIZE_Y > $(($BEDSIZE_Y - 20)) ))
-then
+PRINT_SIZE_Y=$(awk -v krange="$K_RANGE" -v kstep="$K_STEPPING" 'BEGIN {printf "%.2f", krange /  kstep * 5 + 25}')
+if [ $(awk -v printsizey="$PRINT_SIZE_Y" -v bedy="$BEDSIZE_Y" 'BEGIN { if (printsizey > bedy - 20) {print 1}}') ]; then
 	echo "Your K-Factor settings exceed your Y bed size. Check Start / End / Steps for the K-Factor"
 	exit
 fi
 
-START_X=$(awk -v var="$BEDSIZE_X" 'BEGIN {print (var - 80)/2}')
+START_X=$(awk -v var="$BEDSIZE_X" 'BEGIN {print (var - 80) / 2}')
 START_Y=$(awk -v bedy="$BEDSIZE_Y" -v printsizey="$PRINT_SIZE_Y" 'BEGIN {printf "%.2f", (bedy - printsizey) / 2 }')
 PRIME_Y2=$(awk -v var="$START_Y" 'BEGIN {print var + 100}')
 EXTRUSION_RATIO=$(awk -v nozdia="$NOZZLE_DIAMETER" -v nozlineratio="$NOZZLE_LINE_RATIO" -v layheight="$LAYER_HEIGHT" -v fildia="$FILAMENT_DIAMETER" 'BEGIN {
-						printf "%f", nozdia * nozlineratio * layheight / ((fildia/2)^2 * atan2(0, -1))}')
+						printf "%f", nozdia * nozlineratio * layheight / ((fildia / 2)^2 * atan2(0, -1))}')
 EXT_20=$(awk -v extratio="$EXTRUSION_RATIO" -v extmulti="$EXTRUSION_MULT" 'BEGIN {printf "%.5f", extratio * extmulti * 20}')
 EXT_40=$(awk -v extratio="$EXTRUSION_RATIO" -v extmulti="$EXTRUSION_MULT" 'BEGIN {printf "%.5f", extratio * extmulti * 40}')
 
 cat <<EOF
 ; K-FACTOR TEST
 ;
+; Created: $(date +"%Y-%m-%d_%H-%M-%S")
+; Settings:
+; Filament Diameter,${FILAMENT_DIAMETER}
+; Nozzle Diameter,${NOZZLE_DIAMETER}
+; Nozzle Temperature,${NOZZLE_TEMP}
+; Nozzle / Line Ratio,${NOZZLE_LINE_RATIO}
+; Bed Temperature,${BED_TEMP}
+; Slow Printing Speed,${SLOW_SPEED}
+; Fast Printing Speed,${FAST_SPEED}
+; Movement Speed,${MOVE_SPEED}
+; Use UBL,${USE_UBL}
+; Retraction Distance,${RETRACTION}
+; Bed Size X,${BEDSIZE_X}
+; Bed Size Y,${BEDSIZE_Y}
+; Layer Height,${LAYER_HEIGHT}
+; Extrusion Multiplier,${EXTRUSION_MULT}
+; Starting Value K-Factor,${K_START}
+; Ending value K-Factor,${K_END}
+; K-Factor Stepping,${K_STEPPING}
+;
+G28 ; home all axes
 M190 S${BED_TEMP} ; set and wait for bed temp
 M104 S${NOZZLE_TEMP} ; set nozzle temp and continue
-G28 ; home all axes
 EOF
 
-if [ "$USE_UBL" = "1" ] ; then
+if [ "$USE_UBL" -eq "1" ]; then
 	echo "G29 ; execute bed automatic leveling compensation"
 fi
 
@@ -79,11 +96,10 @@ G1 X${START_X} Y${START_Y} F${MOVE_SPEED} ; move to pattern start
 G91 ; use relative coordinates
 EOF
 
-i=$((K_START))
-while [ $i -le $((K_END)) ]
-	do
+i=${K_START}
+while $(awk -v cnt="$i" -v kend="$K_END" 'BEGIN { if (cnt >= kend) {exit 1}}'); do
 	cat << EOF
-M900 K$((i)) ; set K-factor
+M900 K${i} ; set K-factor
 G1 E${RETRACTION}
 G1 X20 Y0 E${EXT_20} F${SLOW_SPEED}
 G1 X40 Y0 E${EXT_40} F${FAST_SPEED}
@@ -91,7 +107,7 @@ G1 X20 Y0 E${EXT_20} F${SLOW_SPEED}
 G1 E-${RETRACTION}
 G1 X-80 Y5 F${MOVE_SPEED}
 EOF
-	i=$(($i+$K_STEPPING))
+	i=$(awk -v cnt="$i" -v kstep="$K_STEPPING" 'BEGIN {printf "%.2f", cnt + kstep}')
 	done
 
 cat << EOF
