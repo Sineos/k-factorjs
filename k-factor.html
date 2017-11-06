@@ -21,7 +21,7 @@ function gengcode (form) {
 	var EXT_MULT = parseFloat(document.forms['form1']['EXTRUSION_MULT'].value);
 	var START_K = parseInt(document.forms['form1']['K_START'].value);
 	var END_K = parseInt(document.forms['form1']['K_END'].value);
-	var STEP_K = parseInt(document.forms['form1']['K_STEP'].value);
+	var STEP_K = parseFloat(document.forms['form1']['K_STEP'].value);
 
 	// Check if K-Factor Stepping is a multiple of the K-Factor Range
 	var RANGE_K =  END_K - START_K;
@@ -74,16 +74,16 @@ function gengcode (form) {
 													'; Ending value K-Factor = ' + END_K + '\n' +
 													'; K-Factor Stepping = ' + STEP_K + '\n' +
 													';\n' +
+													'G28 ; home all axes\n' +													
 													'M190 S' + BED_TEMP + ' ; set and wait for bed temp\n' +
-													'M104 S' + NOZZLE_TEMP + ' ; set nozzle temp and continue\n' +
-													'G28 ; home all axes\n';
-	
+													'M104 S' + NOZZLE_TEMP + ' ; set nozzle temp and continue\n';
+
 	if(document.getElementById('USE_UBL').checked) {
-    document.forms['form1']['textarea'].value += 	'G29 ; execute bed automatic leveling compensation\n';
+    document.forms['form1']['textarea'].value += 	'G29 ; execute bed automatic levelling compensation\n';
     }
 	
 	document.forms['form1']['textarea'].value += 	'M109 S' + NOZZLE_TEMP + ' ; block waiting for nozzle temp\n' +
-													'G21 ; set units to millimeters\n' +
+													'G21 ; set units to millimetres\n' +
 													'M204 S500 ; lower acceleration to 500mm/s2 during the test\n' +
 													'M83 ; use relative distances for extrusion\n' + 
 													'G90 ; use absolute coordinates\n' +
@@ -266,22 +266,19 @@ function roundNumber(num, scale) {
               <td valign="middle">Usually 1.0</td>
             </tr>
             <tr>
-              <td valign="middle"><label for="K_START">Starting value for K:</label></td>
+              <td valign="middle"><label for="K_START">Start value for K:</label></td>
               <td valign="middle"><input type="number" name="K_START" id="K_START" value="0"></td>
-              <td valign="middle">Starting value for the K-Factor. Usually 0 but for bowden setups you might want to start higher, e.g. 30</td>
+              <td valign="middle">Start value for the K-Factor. Usually 0 but for bowden setups you might want to start higher, e.g. 30</td>
             </tr>
             <tr>
-              <td valign="middle"><label for="K_END">Ending value for K:</label></td>
+              <td valign="middle"><label for="K_END">End value for K:</label></td>
               <td valign="middle"><input type="number" name="K_END" id="K_END" value="100"></td>
-              <td valign="middle">Ending value of the K-Factor. Bowden setups may be higher than 100</td>
+              <td valign="middle">End value of the K-Factor. Bowden setups may be higher than 100</td>
             </tr>
             <tr>
               <td valign="middle"><label for="K_STEP">K-Factor Stepping:</label></td>
-              <td valign="middle"><select name="K_STEP" id="K_STEP">
-                <option value="5" selected>5</option>
-                <option value="10">10</option>
-              </select></td>
-              <td valign="middle">Stepping of the K-Factor in the test pattern</td>
+              <td valign="middle"><input type="number" name="K_STEP" id="K_STEP" value="5"></td>
+              <td valign="middle">Stepping of the K-Factor in the test pattern. Needs to be an exact divisor of the K-Factor Range (End - Start)</td>
             </tr>
           </tbody>
         </table>
@@ -301,3 +298,4 @@ function roundNumber(num, scale) {
 </form>
 </body>
 </html>
+
